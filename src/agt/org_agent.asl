@@ -5,6 +5,11 @@ org_name("lab_monitoring_org"). // the agent beliefs that it can manage organiza
 group_name("monitoring_team"). // the agent beliefs that it can manage groups with the id "monitoring_team"
 sch_name("monitoring_scheme"). // the agent beliefs that it can manage schemes with the id "monitoring_scheme"
 
+has_enough_players_for(R) :-
+  role_cardinality(R,Min,Max) &
+  .count(play(_,R,_),NP) &
+  NP >= Min.
+
 /* Initial goals */
 !start. // the agent has the goal to start
 
@@ -34,26 +39,40 @@ sch_name("monitoring_scheme"). // the agent beliefs that it can manage schemes w
   .broadcast(tell, org_created(OrgName));
 
   !inspect(GroupArtId); // inspect the Group artifact
-  !inspect(SchemeArtId). // inspect the Scheme artifact
+  !inspect(SchemeArtId); // inspect the Scheme artifact
 
+  .wait(15000);
+  !complete_group_formation(GroupArtId).
 
-
-
-/* 
- * Plan for reacting to the addition of the test-goal ?formationStatus(ok)
- * Triggering event: addition of goal ?formationStatus(ok)
- * Context: the agent beliefs that there exists a group G whose formation status is being tested
- * Body: if the belief formationStatus(ok)[artifact_id(G)] is not already in the agents belief base
- * the agent waits until the belief is added in the belief base
-*/
-@test_formation_status_is_ok_plan
-+?formationStatus(ok)[artifact_id(G)] : group(GroupName,_,G)[artifact_id(OrgName)] <-
++!complete_group_formation(G) : formationStatus(nok) & group(GroupName,_,G)[artifact_id(OrgId)] & scheme(SchemeName, SchemeType, SchemeArtId) & specification(S)[artifact_id(G)] & org_name(OrgName) <-
   .print("Waiting for group ", GroupName," to become well-formed");
-  .wait({+formationStatus(ok)[artifact_id(G)]}). // waits until the belief is added in the belief base
 
-+formationStatus(ok) : group(GroupName,_,G)[artifact_id(OrgName)] & scheme(SchemeId, SchemeType, ArtId) <-
+  if (not has_enough_players_for(temperature_reader)) {
+    .print("Not enough players for role temperature_reader");
+    .broadcast(tell, ask_fulfill_role(temperature_reader, "lab_monitoring_org"));
+  }
+  else {
+    .print("Enough players for role temperature_reader");
+  }
+  if (not has_enough_players_for(temperature_manifestor)) {
+    .print("Not enough players for role temperature_manifestor");
+    .broadcast(tell, ask_fulfill_role(temperature_manifestor, "lab_monitoring_org"));
+  }
+  else {
+    .print("Enough players for role temperature_manifestor");
+  }
+
+  // .findall(Role, play(_, Role, G), Roles);
+  .wait(15000);
+  !complete_group_formation(GroupArtId).
+  // .wait({+formationStatus(ok)[artifact_id(G)]}). // waits until the belief is added in the belief base
+
++!complete_group_formation(G) : true <-
+  .print("Group ", G, " is well-formed and can work on the scheme.").
+
++formationStatus(ok)[artifact_id(G)] : group(GroupName,_,G)[artifact_id(OrgName)] & scheme(SchemeId, SchemeType, ArtId) <-
   .print("Group ", GroupName, " is well-formed and can work on the scheme.");
-  addScheme(ArtId).
+  addScheme(SchemeId)[artifact_id(G)].
 
 /* 
  * Plan for reacting to the addition of the goal !inspect(OrganizationalArtifactId)
