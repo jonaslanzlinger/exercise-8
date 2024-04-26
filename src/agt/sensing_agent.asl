@@ -2,6 +2,14 @@
 
 
 /* Initial beliefs and rules */
+role_goal(R, G) :-
+   role_mission(R, _, M) & mission_goal(M, G).
+
+can_achieve(G) :-
+   .relevant_plans({+!G[scheme(_)]}, LP) & LP \== [].
+
+i_have_plan_for_role(R) :-
+   not (role_goal(R, G) & not can_achieve(G)).
 
 /* Initial goals */
 !start. // the agent has the goal to start
@@ -15,6 +23,36 @@
 @start_plan
 +!start : true <-
 	.print("Hello world").
+
+// Trigger event for a newly created organization
++org_created(OrgName) : true <-
+	.print("New organization created: ", OrgName);
+	// Join new organization
+	joinWorkspace(OrgName);
+	// Observes the organization properties
+	lookupArtifact(OrgName, OrgId);
+	focus(OrgId).
+
+// Listening to the observable properties of the organization
++group(GroupId, GroupType, ArtId) : true <-
+	// Observes the group properties
+	lookupArtifact(GroupType,Id);
+	focus(Id);
+	
+	!reasoning_for_role_adoption(temperature_reader);
+	!reasoning_for_role_adoption(temperature_manifestor).
+
+// Listening to the observable properties of the organization
++scheme(SchemeId, SchemeType, ArtId) : true <-
+	lookupArtifact(SchemeType,Id);
+	focus(Id).
+
++!reasoning_for_role_adoption(Role) : i_have_plan_for_role(Role) <-
+	.print("I can fulfill this role according to my plans");
+	adoptRole(Role).
+
++!reasoning_for_role_adoption(GroupId) : true <-
+	.print("I can't fulfill this role according to my plans").
 
 /* 
  * Plan for reacting to the addition of the goal !read_temperature

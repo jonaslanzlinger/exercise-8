@@ -16,7 +16,28 @@ sch_name("monitoring_scheme"). // the agent beliefs that it can manage schemes w
 */
 @start_plan
 +!start : org_name(OrgName) & group_name(GroupName) & sch_name(SchemeName) <-
-  .print("Hello world").
+  .print("Hello world");
+  // create the workspace "lab_monitoring_org" and join it
+  createWorkspace(OrgName);
+  joinWorkspace(OrgName, WorkspaceId);
+  // create the OrgBoard artifact and focus it
+  makeArtifact(OrgName, "ora4mas.nopl.OrgBoard", ["src/org/org-spec.xml"], OrgBoardArtId);
+  focus(OrgBoardArtId);
+  // create the GroupArt "monitoring_team" and focus on it
+  createGroup(GroupName, GroupName, GroupArtId);
+  focus(GroupArtId);
+  // create the SchemeArt "monitoring_scheme" and focus on it
+  createScheme(SchemeName, SchemeName, SchemeArtId);
+  focus(SchemeArtId);
+
+  // broadcast the information that a new organization has been created
+  .broadcast(tell, org_created(OrgName));
+
+  !inspect(GroupArtId); // inspect the Group artifact
+  !inspect(SchemeArtId). // inspect the Scheme artifact
+
+
+
 
 /* 
  * Plan for reacting to the addition of the test-goal ?formationStatus(ok)
@@ -29,6 +50,10 @@ sch_name("monitoring_scheme"). // the agent beliefs that it can manage schemes w
 +?formationStatus(ok)[artifact_id(G)] : group(GroupName,_,G)[artifact_id(OrgName)] <-
   .print("Waiting for group ", GroupName," to become well-formed");
   .wait({+formationStatus(ok)[artifact_id(G)]}). // waits until the belief is added in the belief base
+
++formationStatus(ok) : group(GroupName,_,G)[artifact_id(OrgName)] & scheme(SchemeId, SchemeType, ArtId) <-
+  .print("Group ", GroupName, " is well-formed and can work on the scheme.");
+  addScheme(ArtId).
 
 /* 
  * Plan for reacting to the addition of the goal !inspect(OrganizationalArtifactId)
