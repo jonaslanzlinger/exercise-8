@@ -33,12 +33,18 @@ i_have_plan_for_role(R) :-
 // Task 2.2.2: Plan for reacting to the addition of the goal !ask_fulfill_role
 @ask_fulfill_role_plan
 +ask_fulfill_role(Role, GroupName, OrgName) : i_have_plan_for_role(Role) <-
+	.print("I have a plan for the role: ", Role);
 	joinWorkspace(OrgName);
 	lookupArtifact(OrgName, OrgArtId);
 	focus(OrgArtId);
 	lookupArtifact(GroupName, GroupArtId);
 	focus(GroupArtId);
 	adoptRole(Role).
+
+// Task 2.2.2: Plan for reacting to the addition of the goal !ask_fulfill_role BUT the agent does not have a plan for the role
+@ask_fulfill_role_plan_fail
++ask_fulfill_role(Role, GroupName, OrgName) : not i_have_plan_for_role(Role) <-
+	.print("No plan for the role: ", Role).
 
 
 /* 

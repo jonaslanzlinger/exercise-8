@@ -29,23 +29,23 @@ has_enough_players_for(R) :-
   joinWorkspace(OrgName, WorkspaceId);
 
   // Task 1.2: Create and focus on the organization board artifact
-  makeArtifact(OrgName, "ora4mas.nopl.OrgBoard", ["src/org/org-spec.xml"], OrgBoardId)[wid(WorkspaceId)];
-  focus(OrgBoardId)[wid(WorkspaceId)];
+  makeArtifact(OrgName, "ora4mas.nopl.OrgBoard", ["src/org/org-spec.xml"], OrgBoardArtId)[wid(WorkspaceId)];
+  focus(OrgBoardArtId)[wid(WorkspaceId)];
 
   // Task 1.3: Create and focus on the group and scheme artifacts
-  createGroup(GroupName, GroupName, GroupId)[artifact_id(OrgBoardId)];
-  focus(GroupId)[wid(WorkspaceId)];
-  createScheme(SchemeName, SchemeName, SchemeId)[artifact_id(OrgBoardId)];
-  focus(SchemeId)[wid(WorkspaceId)];
+  createGroup(GroupName, GroupName, GroupArtId)[artifact_id(OrgBoardArtId)];
+  focus(GroupArtId)[wid(WorkspaceId)];
+  createScheme(SchemeName, SchemeName, SchemeArtId)[artifact_id(OrgBoardArtId)];
+  focus(SchemeArtId)[wid(WorkspaceId)];
 
   // Task 1.4: Broadcast the creation of the organization
   .broadcast(tell, org_created(OrgName));
 
-  !inspect(GroupId)[wid(WorkspaceId)];
-  !inspect(SchemeId)[wid(WorkspaceId)];
+  !inspect(GroupArtId)[wid(WorkspaceId)];
+  !inspect(SchemeArtId)[wid(WorkspaceId)];
 
   // Task 1.5: Add test goal for the formation status of the group, and wait for the group to become well-formed
-  ?formationStatus(ok)[artifact_id(GroupId)].
+  ?formationStatus(ok)[artifact_id(GroupArtId)].
 
 
 /* 
@@ -56,18 +56,18 @@ has_enough_players_for(R) :-
  * the agent waits until the belief is added in the belief base
 */
 @test_formation_status_is_ok_plan
-+?formationStatus(ok)[artifact_id(G)] : group(GroupName,_,G)[artifact_id(OrgName)] <-
++?formationStatus(ok)[artifact_id(GroupArtId)] : group(GroupName,_,GroupArtId)[artifact_id(OrgName)] <-
   .print("Waiting for group ", GroupName," to become well-formed");
   // Task 2.2.1: Wait 15 seconds until actively striving for the group to become well-formed
   .wait(15000);
   !complete_group_formation(GroupName);
-  .wait({+formationStatus(ok)[artifact_id(G)]}). // waits until the belief is added in the belief base
+  .wait({+formationStatus(ok)[artifact_id(GroupArtId)]}). // waits until the belief is added in the belief base
 
 // Task 1.5: Reacting to the addition of the belief formationStatus(ok)
 @formation_status_is_ok_plan
-+formationStatus(ok)[artifact_id(G)] : group(GroupName,_,G)[artifact_id(OrgName)] & scheme(SchemeName,SchemeType,SchemeArtId) <-
++formationStatus(ok)[artifact_id(GroupArtId)] : group(GroupName,_,GroupArtId)[artifact_id(OrgName)] & scheme(SchemeName,SchemeType,SchemeArtId) <-
   .print("Group ", GroupName, " is well-formed and can work on the scheme.");
-  addScheme(SchemeName)[artifact_id(G)];
+  addScheme(SchemeName)[artifact_id(GroupArtId)];
   focus(SchemeArtId).
 
 // Task 2.2.1: Actively striving for the group to become well-formed each 15 seconds

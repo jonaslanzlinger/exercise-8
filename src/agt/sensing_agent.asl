@@ -31,21 +31,19 @@ i_have_plan_for_role(R) :-
 @org_created_plan
 +org_created(OrgName) : true <-
 	joinWorkspace(OrgName);
-	lookupArtifact(OrgName, OrgId);
-	focus(OrgId).
+	lookupArtifact(OrgName, OrgArtId);
+	focus(OrgArtId).
 
 // Listening to the observable properties of the organization
 +group(GroupId, GroupType, GroupArtId) : true <-
-	lookupArtifact(GroupType,Id);
-	focus(Id);
+	focus(GroupArtId);
 	// Task 2.1.2: Reasoning on the organization and adoption of relevant roles
 	!reasoning_for_role_adoption(temperature_reader);
 	!reasoning_for_role_adoption(temperature_manifestor).
 
 // Listening to the observable properties of the organization
 +scheme(SchemeId, SchemeType, SchemeArtId) : true <-
-	lookupArtifact(SchemeType,Id);
-	focus(Id).
+	focus(SchemeArtId).
 
 // Task 2.1.2: Reasoning on the organization and adoption of relevant roles
 @reasoning_for_role_adoption_plan
