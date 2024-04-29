@@ -5,6 +5,7 @@ org_name("lab_monitoring_org"). // the agent beliefs that it can manage organiza
 group_name("monitoring_team"). // the agent beliefs that it can manage groups with the id "monitoring_team"
 sch_name("monitoring_scheme"). // the agent beliefs that it can manage schemes with the id "monitoring_scheme"
 
+// Task 2.2.1: Infere whether the group has enough players for a role
 has_enough_players_for(R) :-
   role_cardinality(R,Min,Max) &
   .count(play(_,R,_),NP) &
@@ -22,57 +23,68 @@ has_enough_players_for(R) :-
 @start_plan
 +!start : org_name(OrgName) & group_name(GroupName) & sch_name(SchemeName) <-
   .print("Hello world");
-  // create the workspace "lab_monitoring_org" and join it
+
+  // Task 1.1: Create and join organization workspace "lab_monitoring_org"
   createWorkspace(OrgName);
   joinWorkspace(OrgName, WorkspaceId);
-  // create the OrgBoard artifact and focus it
-  makeArtifact(OrgName, "ora4mas.nopl.OrgBoard", ["src/org/org-spec.xml"], OrgBoardArtId);
-  focus(OrgBoardArtId);
-  // create the GroupArt "monitoring_team" and focus on it
-  createGroup(GroupName, GroupName, GroupArtId);
-  focus(GroupArtId);
-  // create the SchemeArt "monitoring_scheme" and focus on it
-  createScheme(SchemeName, SchemeName, SchemeArtId);
-  focus(SchemeArtId);
 
-  // broadcast the information that a new organization has been created
+  // Task 1.2: Create and focus on the organization board artifact
+  makeArtifact(OrgName, "ora4mas.nopl.OrgBoard", ["src/org/org-spec.xml"], OrgBoardId)[wid(WorkspaceId)];
+  focus(OrgBoardId)[wid(WorkspaceId)];
+
+  // Task 1.3: Create and focus on the group and scheme artifacts
+  createGroup(GroupName, GroupName, GroupId)[artifact_id(OrgBoardId)];
+  focus(GroupId)[wid(WorkspaceId)];
+  createScheme(SchemeName, SchemeName, SchemeId)[artifact_id(OrgBoardId)];
+  focus(SchemeId)[wid(WorkspaceId)];
+
+  // Task 1.4: Broadcast the creation of the organization
   .broadcast(tell, org_created(OrgName));
 
-  !inspect(GroupArtId); // inspect the Group artifact
-  !inspect(SchemeArtId); // inspect the Scheme artifact
+  !inspect(GroupId)[wid(WorkspaceId)];
+  !inspect(SchemeId)[wid(WorkspaceId)];
 
-  .wait(15000);
-  !complete_group_formation(GroupArtId).
+  // Task 1.5: Add test goal for the formation status of the group, and wait for the group to become well-formed
+  ?formationStatus(ok)[artifact_id(GroupId)].
 
-+!complete_group_formation(G) : formationStatus(nok) & group(GroupName,_,G)[artifact_id(OrgId)] & scheme(SchemeName, SchemeType, SchemeArtId) & specification(S)[artifact_id(G)] & org_name(OrgName) <-
+
+/* 
+ * Plan for reacting to the addition of the test-goal ?formationStatus(ok)
+ * Triggering event: addition of goal ?formationStatus(ok)
+ * Context: the agent beliefs that there exists a group G whose formation status is being tested
+ * Body: if the belief formationStatus(ok)[artifact_id(G)] is not already in the agents belief base
+ * the agent waits until the belief is added in the belief base
+*/
+@test_formation_status_is_ok_plan
++?formationStatus(ok)[artifact_id(G)] : group(GroupName,_,G)[artifact_id(OrgName)] <-
   .print("Waiting for group ", GroupName," to become well-formed");
+  // Task 2.2.1: Wait 15 seconds until actively striving for the group to become well-formed
+  .wait(15000);
+  !complete_group_formation(GroupName);
+  .wait({+formationStatus(ok)[artifact_id(G)]}). // waits until the belief is added in the belief base
 
+// Task 1.5: Reacting to the addition of the belief formationStatus(ok)
+@formation_status_is_ok_plan
++formationStatus(ok)[artifact_id(G)] : group(GroupName,_,G)[artifact_id(OrgName)] & scheme(SchemeName,SchemeType,SchemeArtId) <-
+  .print("Group ", GroupName, " is well-formed and can work on the scheme.");
+  addScheme(SchemeName)[artifact_id(G)];
+  focus(SchemeArtId).
+
+// Task 2.2.1: Actively striving for the group to become well-formed each 15 seconds
+@complete_group_formation_plan
++!complete_group_formation(GroupName) : formationStatus(nok) & group(GroupName,GroupType,GroupArtId) & org_name(OrgName) <-
   if (not has_enough_players_for(temperature_reader)) {
-    .print("Not enough players for role temperature_reader");
-    .broadcast(tell, ask_fulfill_role(temperature_reader, "lab_monitoring_org"));
-  }
-  else {
-    .print("Enough players for role temperature_reader");
+    .print("Not enough players for role: temperature_reader");
+    .broadcast(tell, ask_fulfill_role(temperature_reader, GroupName, OrgName));
   }
   if (not has_enough_players_for(temperature_manifestor)) {
-    .print("Not enough players for role temperature_manifestor");
-    .broadcast(tell, ask_fulfill_role(temperature_manifestor, "lab_monitoring_org"));
+    .print("Not enough players for role: temperature_manifestor");
+    .broadcast(tell, ask_fulfill_role(temperature_manifestor, GroupName, OrgName));
   }
-  else {
-    .print("Enough players for role temperature_manifestor");
-  }
-
-  // .findall(Role, play(_, Role, G), Roles);
   .wait(15000);
-  !complete_group_formation(GroupArtId).
-  // .wait({+formationStatus(ok)[artifact_id(G)]}). // waits until the belief is added in the belief base
-
-+!complete_group_formation(G) : true <-
-  .print("Group ", G, " is well-formed and can work on the scheme.").
-
-+formationStatus(ok)[artifact_id(G)] : group(GroupName,_,G)[artifact_id(OrgName)] & scheme(SchemeId, SchemeType, ArtId) <-
-  .print("Group ", GroupName, " is well-formed and can work on the scheme.");
-  addScheme(SchemeId)[artifact_id(G)].
+  if (not (has_enough_players_for(temperature_reader) & has_enough_players_for(temperature_manifestor))) {
+    !complete_group_formation(GroupArtId);
+  }.
 
 /* 
  * Plan for reacting to the addition of the goal !inspect(OrganizationalArtifactId)

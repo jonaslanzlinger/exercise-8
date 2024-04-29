@@ -2,6 +2,8 @@
 
 
 /* Initial beliefs and rules */
+
+// Task 2.1.2: Reason on the organization and adoption of relevant roles
 role_goal(R, G) :-
    role_mission(R, _, M) & mission_goal(M, G).
 
@@ -10,6 +12,7 @@ can_achieve(G) :-
 
 i_have_plan_for_role(R) :-
    not (role_goal(R, G) & not can_achieve(G)).
+
 
 /* Initial goals */
 !start. // the agent has the goal to start
@@ -24,35 +27,34 @@ i_have_plan_for_role(R) :-
 +!start : true <-
 	.print("Hello world").
 
-// Trigger event for a newly created organization
+// Task 2.1.1: Reacting to the creation of new organization workspaces
+@org_created_plan
 +org_created(OrgName) : true <-
-	.print("New organization created: ", OrgName);
-	// Join new organization
 	joinWorkspace(OrgName);
-	// Observes the organization properties
 	lookupArtifact(OrgName, OrgId);
 	focus(OrgId).
 
 // Listening to the observable properties of the organization
-+group(GroupId, GroupType, ArtId) : true <-
-	// Observes the group properties
++group(GroupId, GroupType, GroupArtId) : true <-
 	lookupArtifact(GroupType,Id);
 	focus(Id);
-	
+	// Task 2.1.2: Reasoning on the organization and adoption of relevant roles
 	!reasoning_for_role_adoption(temperature_reader);
 	!reasoning_for_role_adoption(temperature_manifestor).
 
 // Listening to the observable properties of the organization
-+scheme(SchemeId, SchemeType, ArtId) : true <-
++scheme(SchemeId, SchemeType, SchemeArtId) : true <-
 	lookupArtifact(SchemeType,Id);
 	focus(Id).
 
+// Task 2.1.2: Reasoning on the organization and adoption of relevant roles
+@reasoning_for_role_adoption_plan
 +!reasoning_for_role_adoption(Role) : i_have_plan_for_role(Role) <-
-	.print("I can fulfill this role according to my plans");
+	.print("I have a plan for the role: ", Role);
 	adoptRole(Role).
 
-+!reasoning_for_role_adoption(GroupId) : true <-
-	.print("I can't fulfill this role according to my plans").
++!reasoning_for_role_adoption(Role) : true <-
+	.print("No plan for the role: ", Role).
 
 /* 
  * Plan for reacting to the addition of the goal !read_temperature
