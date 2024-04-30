@@ -72,19 +72,28 @@ has_enough_players_for(R) :-
 
 // Task 2.2.1: Actively striving for the group to become well-formed each 15 seconds
 @complete_group_formation_plan
-+!complete_group_formation(GroupName) : formationStatus(nok) & group(GroupName,GroupType,GroupArtId) & org_name(OrgName) <-
-  if (not has_enough_players_for(temperature_reader)) {
-    .print("Not enough players for role: temperature_reader");
-    .broadcast(tell, ask_fulfill_role(temperature_reader, GroupName, OrgName));
-  }
-  if (not has_enough_players_for(temperature_manifestor)) {
-    .print("Not enough players for role: temperature_manifestor");
-    .broadcast(tell, ask_fulfill_role(temperature_manifestor, GroupName, OrgName));
++!complete_group_formation(GroupName) : formationStatus(nok) & group(GroupName,GroupType,GroupArtId) & org_name(OrgName) & specification(group_specification(GroupName,RolesList,_,_)) <-
+  for ( .member(Role,RolesList) ) {
+    !check_enough_players_for_role(Role);
   }
   .wait(15000);
-  if (not (has_enough_players_for(temperature_reader) & has_enough_players_for(temperature_manifestor))) {
-    !complete_group_formation(GroupArtId);
-  }.
+  !complete_group_formation(GroupArtId).
+
+// Task 2.2.1: Default plan for +!complete_group_formation(GroupName)
+@complete_group_formation_plan_fail
++!complete_group_formation(GroupName) : true <-
+  true.
+
+// Task 2.2.1: Check if there are enough players for a role, and broadcast a belief to ask for fulfilling the role
+@check_enough_players_for_role_plan
++!check_enough_players_for_role(role(Role,_,_,MinCard,MaxCard,_,_)) : not has_enough_players_for(Role) & org_name(OrgName) & group_name(GroupName) <-
+  .print("Not enough players for role: ", Role);
+  .broadcast(tell, ask_fulfill_role(Role, GroupName, OrgName)).
+
+// Task 2.2.1: Default plan for +!check_enough_players_for_role(Role)
+@check_enough_players_for_role_plan_fail
++!check_enough_players_for_role(role(Role,_,_,MinCard,MaxCard,_,_)) : true <-
+  true.
 
 /* 
  * Plan for reacting to the addition of the goal !inspect(OrganizationalArtifactId)

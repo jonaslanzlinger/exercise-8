@@ -35,24 +35,33 @@ i_have_plan_for_role(R) :-
 	focus(OrgArtId).
 
 // Listening to the observable properties of the organization
+@group_plan
 +group(GroupId, GroupType, GroupArtId) : true <-
 	focus(GroupArtId);
-	// Task 2.1.2: Reasoning on the organization and adoption of relevant roles
-	!reasoning_for_role_adoption(temperature_reader);
-	!reasoning_for_role_adoption(temperature_manifestor).
+	!scan_group_specification(GroupArtId).
 
 // Listening to the observable properties of the organization
+@scheme_plan
 +scheme(SchemeId, SchemeType, SchemeArtId) : true <-
 	focus(SchemeArtId).
 
 // Task 2.1.2: Reasoning on the organization and adoption of relevant roles
+@scan_group_specification_plan
++!scan_group_specification(GroupArtId) : specification(group_specification(GroupName,RolesList,_,_)) <-
+	for ( .member(Role,RolesList) ) {
+    !reasoning_for_role_adoption(Role);
+	}.
+
+// Task 2.1.2: Reasoning on the organization and adoption of relevant roles
 @reasoning_for_role_adoption_plan
-+!reasoning_for_role_adoption(Role) : i_have_plan_for_role(Role) <-
++!reasoning_for_role_adoption(role(Role,_,_,MinCard,MaxCard,_,_)) : i_have_plan_for_role(Role) <-
 	.print("I have a plan for the role: ", Role);
 	adoptRole(Role).
 
-+!reasoning_for_role_adoption(Role) : true <-
-	.print("No plan for the role: ", Role).
+// Task 2.1.2: Fail plan for reasoning on the organization and adoption of relevant roles
+@reasoning_for_role_adoption_plan_fail
++!reasoning_for_role_adoption(role(Role,_,_,MinCard,MaxCard,_,_)) : true <-
+	true.
 
 /* 
  * Plan for reacting to the addition of the goal !read_temperature
